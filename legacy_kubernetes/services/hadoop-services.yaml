@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-service
+  namespace: hadoop-cluster
+  labels:
+    app: spark-master
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30080
+      name: spark-web
+    - port: 7077
+      nodePort: 30077
+      name: spark-master
+    - port: 9870
+      nodePort: 30870
+      name: namenode-web
+    - port: 8888
+      nodePort: 30888
+      name: jupyter
+    - port: 8088
+      nodePort: 30088
+      name: resourcemanager
+    - port: 8042
+      nodePort: 30042
+      name: nodemanager
+    - port: 18080
+      nodePort: 31080
+      name: history-server
+    - port: 8000
+      nodePort: 30000
+      name: fastapi
+  selector:
+    app: spark-master
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-worker1-service
+  namespace: hadoop-cluster
+  labels:
+    app: spark-worker1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      name: worker-web
+    - port: 8042
+      name: nodemanager
+  selector:
+    app: spark-worker1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-worker2-service
+  namespace: hadoop-cluster
+  labels:
+    app: spark-worker2
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      name: worker-web
+    - port: 8042
+      name: nodemanager
+  selector:
+    app: spark-worker2

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert --out k8s/
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: spark-master
+  name: spark-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: spark-master
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert --out k8s/
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: spark-master
+    spec:
+      containers:
+        - env:
+            - name: SPARK_LOCAL_IP
+              value: 10.5.0.2
+          image: raulcsouza/spark-master-hadoop
+          name: spark-master
+          ports:
+            - containerPort: 8088
+              protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 9870
+              protocol: TCP
+            - containerPort: 8888
+              protocol: TCP
+            - containerPort: 8042
+              protocol: TCP
+            - containerPort: 8000
+              protocol: TCP
+            - containerPort: 4040
+              protocol: TCP
+            - containerPort: 18080
+              protocol: TCP
+          tty: true
+          volumeMounts:
+            - mountPath: /path/to/hadoop/etc/hadoop/yarn-site.xml
+              name: spark-master-cm1
+              subPath: yarn-site.xml
+            - mountPath: /path/to/hadoop/etc/hadoop/core-site.xml
+              name: spark-master-cm2
+              subPath: core-site.xml
+            - mountPath: /path/to/hadoop/etc/hadoop/mapred-site.xml
+              name: spark-master-cm3
+              subPath: mapred-site.xml
+      hostname: spark-master
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            items:
+              - key: yarn-site.xml
+                path: yarn-site.xml
+            name: spark-master-cm1
+          name: spark-master-cm1
+        - configMap:
+            items:
+              - key: core-site.xml
+                path: core-site.xml
+            name: spark-master-cm2
+          name: spark-master-cm2
+        - configMap:
+            items:
+              - key: mapred-site.xml
+                path: mapred-site.xml
+            name: spark-master-cm3
+          name: spark-master-cm3

@@ -1,0 +1,15 @@
+scikit-learn==1.4.0
+matplotlib==3.8.3
+jupyter==1.0.0
+pyspark==3.4.0
+numpy==1.26.4
+dask==2024.3.1
+pandas==2.2.1
+findspark==2.0.1
+dask-yarn==0.9
+bash_kernel==0.9.3
+nltk==3.8.1
+johnsnowlabs==5.3.2
+spark-nlp==5.3.1
+tweepy==4.14.0
+kafka-python==2.0.2

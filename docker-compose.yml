@@ -1,0 +1,63 @@
+version: "1.0"
+services:
+  spark-master:
+    image: raulcsouza/spark-master-hadoop
+    container_name: spark-master
+    hostname: spark-master
+    tty: true
+    volumes:
+      - ./user_data:/user_data
+      - ./hadoop/spark-master/config/hadoop/hadoop_files/yarn-site.xml:/path/to/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/spark-master/config/hadoop/hadoop_files/core-site.xml:/path/to/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/spark-master/config/hadoop/hadoop_files/mapred-site.xml:/path/to/hadoop/etc/hadoop/mapred-site.xml
+    ports:
+      - "8088:8088" # WebUI ResourceManager
+      - "8080:8080" # WebUI Spark Master
+      - "9870:9870" # WebUI NameNode
+      - "8888:8888" # WebUI Jupyter
+      - "8042:8042" # NodeManager
+      - "8000:8000" # FastAPI
+      - "0.0.0.0:4040:4040" # Spark
+      - "0.0.0.0:18080:18080"
+    networks:
+      spark-network:
+        ipv4_address: 10.5.0.2
+    environment:
+      - "SPARK_LOCAL_IP=10.5.0.2"
+  spark-worker-1:
+    image: raulcsouza/spark-worker-hadoop
+    container_name: spark-worker-1
+    hostname: spark-worker-1
+    tty: true
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081" # WebUI Spark worker
+      - "6042:8042" # NodeManager
+    environment:
+      - "SPARK_LOCAL_IP=10.5.0.3"
+    networks:
+      spark-network:
+        ipv4_address: 10.5.0.3
+  spark-worker-2:
+    image: raulcsouza/spark-worker-hadoop
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    tty: true
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8081" # WebUI Spark worker
+      - "7042:8042" # NodeManager
+    environment:
+     - "SPARK_LOCAL_IP=10.5.0.4"
+    networks:
+      spark-network:
+        ipv4_address: 10.5.0.4
+networks:
+  spark-network:
+    driver: bridge
+    ipam:
+     driver: default
+     config:
+       - subnet: 10.5.0.0/16

@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: spark-hadoop
+  labels:
+    app: spark-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-master
+  template:
+    metadata:
+      labels:
+        app: spark-master
+    spec:
+      hostname: spark-master
+      containers:
+      - name: spark-master
+        image: raulcsouza/spark-master-hadoop
+        imagePullPolicy: IfNotPresent
+        tty: true
+        ports:
+        - containerPort: 8088
+          name: yarn-ui
+        - containerPort: 8080
+          name: spark-master-ui
+        - containerPort: 9870
+          name: namenode-ui
+        - containerPort: 8888
+          name: jupyter
+        - containerPort: 8042
+          name: nodemanager
+        - containerPort: 8000
+          name: fastapi
+        - containerPort: 4040
+          name: spark-app
+        - containerPort: 18080
+          name: spark-history
+        - containerPort: 7077
+          name: spark-master
+        - containerPort: 9000
+          name: hdfs
+        env:
+        - name: SPARK_LOCAL_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: user-data
+          mountPath: /user_data
+        - name: hadoop-config
+          mountPath: /path/to/hadoop/etc/hadoop
+          readOnly: true
+      volumes:
+      - name: user-data
+        persistentVolumeClaim:
+          claimName: user-data-pvc
+      - name: hadoop-config
+        configMap:
+          name: hadoop-config
+          items:
+          - key: core-site.xml
+            path: core-site.xml
+          - key: yarn-site.xml
+            path: yarn-site.xml
+          - key: mapred-site.xml
+            path: mapred-site.xml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-service
+  namespace: spark-hadoop
+spec:
+  selector:
+    app: spark-master
+  ports:
+  - name: yarn-ui
+    port: 8088
+    targetPort: 8088
+  - name: spark-master-ui
+    port: 8080
+    targetPort: 8080
+  - name: namenode-ui
+    port: 9870
+    targetPort: 9870
+  - name: jupyter
+    port: 8888
+    targetPort: 8888
+  - name: nodemanager
+    port: 8042
+    targetPort: 8042
+  - name: fastapi
+    port: 8000
+    targetPort: 8000
+  - name: spark-app
+    port: 4040
+    targetPort: 4040
+  - name: spark-history
+    port: 18080
+    targetPort: 18080
+  - name: spark-master
+    port: 7077
+    targetPort: 7077
+  - name: hdfs
+    port: 9000
+    targetPort: 9000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: spark-hadoop
+spec:
+  selector:
+    app: spark-master
+  ports:
+  - name: spark-master
+    port: 7077
+    targetPort: 7077
+  - name: hdfs
+    port: 9000
+    targetPort: 9000
+  type: ClusterIP
+  clusterIP: None
