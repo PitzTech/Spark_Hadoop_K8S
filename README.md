@@ -31,6 +31,9 @@ Este projeto configura um cluster Hadoop e Spark utilizando Docker.
    sudo docker compose down
    ...
 
+/hadoop/spark-base/bin insert these files:
 
+hadoop-3.4.0.tar.gz
+spark-3.5.0-bin-hadoop3.tgz
 
 
