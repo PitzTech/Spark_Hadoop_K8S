@@ -23,10 +23,7 @@ spec:
         io.kompose.service: spark-master
     spec:
       containers:
-        - env:
-            - name: SPARK_LOCAL_IP
-              value: 10.5.0.2
-          image: raulcsouza/spark-master-hadoop
+        - image: raulcsouza/spark-master-hadoop
           name: spark-master
           ports:
             - containerPort: 8088
@@ -56,7 +53,6 @@ spec:
             - mountPath: /path/to/hadoop/etc/hadoop/mapred-site.xml
               name: spark-master-cm3
               subPath: mapred-site.xml
-      hostname: spark-master
       restartPolicy: Always
       volumes:
         - configMap:
