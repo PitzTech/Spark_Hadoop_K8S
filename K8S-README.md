@@ -223,9 +223,22 @@ multipass transfer -r hadoop/spark-base/bin/ k8s-worker1:/home/ubuntu/Spark_Hado
 multipass shell k8s-master  # (or k8s-worker1, k8s-worker2)
 cd Spark_Hadoop_K8S
 
-# Install required dependencies
+# Install required dependencies including Docker
 sudo apt-get update
-sudo apt-get install -y make curl
+sudo apt-get install -y make curl apt-transport-https ca-certificates gnupg lsb-release
+
+# Install Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verify Docker installation
+docker --version
 
 # Verify binaries are in place
 ls -la hadoop/spark-base/bin/
