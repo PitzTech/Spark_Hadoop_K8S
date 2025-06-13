@@ -182,7 +182,7 @@ https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
 **Spark 3.5.0:**
 https://drive.google.com/uc?id=19MRDBRugUU6mjB_cEhRhZBOJy92Z8gve
 
-Save both files to your host machine.
+Save both files to your Downloads folder (or note the exact path where you save them).
 
 #### Clone Repository and Transfer Binaries:
 
@@ -192,24 +192,28 @@ multipass shell k8s-master
 git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
 exit
 
-# Transfer binaries to master VM
-multipass transfer hadoop-3.4.0.tar.gz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+# Create bin folder and transfer binaries to master VM
+# First create the bin directory in the VM
+multipass exec k8s-master -- mkdir -p /home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin
+
+# Then transfer the binaries (adjust paths to where you downloaded the files)
+# If files are in Downloads folder:
+multipass transfer ~/Downloads/hadoop-3.4.0.tar.gz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer ~/Downloads/spark-3.5.0-bin-hadoop3.tgz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+
+multipass transfer -r hadoop/spark-base/bin/ k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/
 
 # Repeat for worker nodes (if using multi-node setup)
 multipass shell k8s-worker1
 git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
 exit
 
-multipass transfer hadoop-3.4.0.tar.gz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+# Create bin directory and transfer binaries to worker1
+multipass exec k8s-worker1 -- mkdir -p /home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin
+multipass transfer ~/Downloads/hadoop-3.4.0.tar.gz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer ~/Downloads/spark-3.5.0-bin-hadoop3.tgz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
 
-multipass shell k8s-worker2
-git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-exit
-
-multipass transfer hadoop-3.4.0.tar.gz k8s-worker2:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-worker2:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer -r hadoop/spark-base/bin/ k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/
 ```
 
 #### Build Images on All Nodes:
@@ -246,7 +250,7 @@ docker images | grep hadoop
 ```bash
 # On each VM, import the built images to MicroK8s
 microk8s ctr images import <(docker save spark-base-hadoop:latest)
-microk8s ctr images import <(docker save spark-master-hadoop:latest)  
+microk8s ctr images import <(docker save spark-master-hadoop:latest)
 microk8s ctr images import <(docker save spark-worker-hadoop:latest)
 
 # Verify images are available in MicroK8s
@@ -296,7 +300,7 @@ microk8s kubectl apply -f spark-worker-service.yaml
 microk8s kubectl get pods -w
 ```
 
-**Note**: After deploying, it may take 2-3 minutes for all services to start properly. 
+**Note**: After deploying, it may take 2-3 minutes for all services to start properly.
 
 ## **Automatic Service Startup**
 
