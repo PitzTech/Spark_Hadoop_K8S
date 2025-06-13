@@ -340,7 +340,7 @@ microk8s kubectl get nodes -o wide
 
 Access the Spark/Hadoop web interfaces using MetalLB LoadBalancer for a production-like Kubernetes setup:
 
-### **Step 1: Enable MetalLB**
+#### **Step 1: Enable MetalLB**
 
 ```bash
 # Enable MetalLB with IP range in same subnet as your VM
@@ -351,34 +351,34 @@ microk8s enable metallb:10.201.228.50-10.201.228.60
 microk8s kubectl get pods -n metallb-system
 ```
 
-### **Step 2: Convert Services to LoadBalancer**
+#### **Step 2: Convert Services to LoadBalancer**
 
 ```bash
 # Change spark-master service to LoadBalancer
 microk8s kubectl patch service spark-master -p '{"spec":{"type":"LoadBalancer"}}'
+
+# Optional: Also change worker service for worker web UI access
+microk8s kubectl patch service spark-worker -p '{"spec":{"type":"LoadBalancer"}}'
 
 # Check external IP assignment (may take 1-2 minutes)
 microk8s kubectl get services -w
 
 # Expected output:
 # spark-master   LoadBalancer   10.152.183.87   10.201.228.50   8088:31234/TCP,8080:31235/TCP...
+# spark-worker   LoadBalancer   10.152.183.68   10.201.228.51   8081:31236/TCP,8042:31237/TCP...
 ```
 
-### **Step 3: Access via LoadBalancer IPs**
+#### **Step 3: Access Web Interfaces**
 
-```bash
-# Note the EXTERNAL-IP from kubectl get services
-# Example: 10.201.228.50
-```
-
-**Access using LoadBalancer IP:**
+**Access using LoadBalancer External IPs (from your browser):**
 - **Spark Master UI**: `http://10.201.228.50:8080`
 - **Hadoop NameNode UI**: `http://10.201.228.50:9870`
 - **YARN ResourceManager UI**: `http://10.201.228.50:8088`
 - **Jupyter Notebook**: `http://10.201.228.50:8888`
 - **Spark History Server**: `http://10.201.228.50:18080`
+- **Spark Worker UI**: `http://10.201.228.51:8081` (if worker service converted)
 
-### **LoadBalancer Troubleshooting**
+#### **Troubleshooting LoadBalancer**
 
 ```bash
 # If LoadBalancer shows <pending> for EXTERNAL-IP:
@@ -389,28 +389,15 @@ microk8s kubectl logs -n metallb-system -l app=metallb
 
 # Verify IP range is correct:
 microk8s kubectl get configmap config -n metallb-system -o yaml
+
+# Check if MetalLB controller is running:
+microk8s kubectl get pods -n metallb-system
+
+# Restart MetalLB if needed:
+microk8s kubectl rollout restart deployment/controller -n metallb-system
 ```
 
-## **Network Accessibility Summary**
-
-| Access Method | From VM | From Host Machine | From Other Machines |
-|---------------|---------|-------------------|-------------------|
-| **Port Forward** | ✅ `localhost:8080` | ✅ `10.201.228.21:8080` | ❌ Usually blocked |
-| **NodePort** | ✅ `10.201.228.21:30XXX` | ✅ `10.201.228.21:30XXX` | ❓ Depends on network |
-| **LoadBalancer** | ✅ `10.201.228.50:8080` | ✅ `10.201.228.50:8080` | ❓ Depends on network |
-
-## **Recommended Approach**
-
-1. **Start with Port Forwarding** - Simple and reliable for learning
-2. **Try NodePort** - If you want persistent access without manual forwarding  
-3. **Use LoadBalancer** - For advanced Kubernetes learning and production simulation
-
-## **Stop Port Forwarding**
-
-```bash
-# Kill all port forwards when done
-pkill -f "port-forward"
-```
+**Note**: The LoadBalancer provides production-like external access to your Kubernetes services. Each service gets its own external IP from the configured range.
 
 ### 9. Monitoring Tools
 
