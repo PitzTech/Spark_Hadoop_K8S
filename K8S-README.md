@@ -289,11 +289,30 @@ microk8s kubectl apply -f spark-worker-service.yaml
 microk8s kubectl get pods -w
 ```
 
-**Note**: After deploying, it may take 2-3 minutes for all services to start properly. The bootstrap script automatically:
-- Detects master vs worker pods based on hostname pattern
-- Starts HDFS (NameNode, DataNode) and YARN (ResourceManager) on master
-- Starts Spark Master on master and Spark Workers on worker pods
-- Uses direct daemon commands to avoid SSH dependencies
+**Note**: After deploying, it may take 2-3 minutes for all services to start properly. 
+
+## **Automatic Service Startup**
+
+The bootstrap script **automatically starts all services** without manual intervention:
+
+### **Master Pod** (`spark-master-xxxxxxxxx-xxxxx`):
+- ✅ **Auto-detects master role** using hostname pattern `^spark-master`
+- ✅ **Starts automatically:**
+  - HDFS NameNode & DataNode
+  - YARN ResourceManager
+  - Spark Master (port 7077, WebUI 8080)
+  - Spark History Server (port 18080)
+  - Jupyter Notebook (port 8888)
+  - FastAPI service (port 8000)
+
+### **Worker Pods** (`spark-worker-xxxxxxxxx-xxxxx`):
+- ✅ **Auto-detects worker role** (doesn't match spark-master pattern)
+- ✅ **Starts automatically:**
+  - HDFS DataNode
+  - YARN NodeManager
+  - Spark Worker (connects to master at spark://spark-master:7077)
+
+**No SSH required** - Uses direct daemon commands for reliable startup.
 
 ### 7. Verify Deployment
 
@@ -319,29 +338,132 @@ microk8s kubectl get nodes -o wide
 
 ### 8. Access Web Interfaces
 
-Get the master node IP and access these interfaces:
+You have multiple options to access the Spark/Hadoop web interfaces from your browser:
 
-- **Spark Master UI**: `http://<MASTER_NODE_IP>:8080`
-- **Hadoop NameNode UI**: `http://<MASTER_NODE_IP>:9870`
-- **YARN ResourceManager UI**: `http://<MASTER_NODE_IP>:8088`
-- **Spark History Server**: `http://<MASTER_NODE_IP>:18080`
+## **Option 1: Port Forwarding (Recommended for Testing)**
 
-### 9. Port Forwarding (Alternative Access)
-
-If you can't access directly, use port forwarding:
+**Advantages**: Simple, reliable, works from any machine
+**Use case**: Development, testing, learning
 
 ```bash
-# Forward Spark Master UI
-microk8s kubectl port-forward service/spark-master 8080:8080 --address=0.0.0.0
+# Forward multiple ports (run each in separate terminal or use nohup)
+nohup microk8s kubectl port-forward service/spark-master 8080:8080 --address=0.0.0.0 > /dev/null 2>&1 &
+nohup microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0 > /dev/null 2>&1 &
+nohup microk8s kubectl port-forward service/spark-master 8088:8088 --address=0.0.0.0 > /dev/null 2>&1 &
+nohup microk8s kubectl port-forward service/spark-master 8888:8888 --address=0.0.0.0 > /dev/null 2>&1 &
+nohup microk8s kubectl port-forward service/spark-master 18080:18080 --address=0.0.0.0 > /dev/null 2>&1 &
 
-# Forward Hadoop NameNode UI
-microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0
-
-# Forward YARN ResourceManager UI
-microk8s kubectl port-forward service/spark-master 8088:8088 --address=0.0.0.0
+# Check running port forwards
+ps aux | grep port-forward | grep -v grep
 ```
 
-## Monitoring Tools
+**Access from your host machine browser:**
+- **Spark Master UI**: `http://10.201.228.21:8080`
+- **Hadoop NameNode UI**: `http://10.201.228.21:9870`
+- **YARN ResourceManager UI**: `http://10.201.228.21:8088`
+- **Jupyter Notebook**: `http://10.201.228.21:8888`
+- **Spark History Server**: `http://10.201.228.21:18080`
+
+## **Option 2: NodePort Services**
+
+**Advantages**: More "Kubernetes-native", persistent across restarts
+**Use case**: When you want permanent external access
+
+```bash
+# Change services to NodePort type
+microk8s kubectl patch service spark-master -p '{"spec":{"type":"NodePort"}}'
+microk8s kubectl patch service spark-worker -p '{"spec":{"type":"NodePort"}}'
+
+# Check assigned NodePorts
+microk8s kubectl get services
+
+# Example output:
+# spark-master   NodePort   10.152.183.87   <none>   8088:30123/TCP,8080:30124/TCP,9870:30125/TCP...
+```
+
+**Access using NodePorts:**
+- **Spark Master UI**: `http://10.201.228.21:30124` (NodePort for 8080)
+- **Hadoop NameNode UI**: `http://10.201.228.21:30125` (NodePort for 9870)  
+- **YARN ResourceManager**: `http://10.201.228.21:30123` (NodePort for 8088)
+
+## **Option 3: LoadBalancer with MetalLB (Advanced)**
+
+**Advantages**: Production-like setup, external IPs, enterprise feel
+**Use case**: Learning advanced Kubernetes concepts, production simulation
+
+### **Step 1: Enable MetalLB**
+
+```bash
+# Enable MetalLB with IP range in same subnet as your VM
+# Your VM IP: 10.201.228.21, so use range: 10.201.228.50-10.201.228.60
+microk8s enable metallb:10.201.228.50-10.201.228.60
+
+# Verify MetalLB is running
+microk8s kubectl get pods -n metallb-system
+```
+
+### **Step 2: Convert Services to LoadBalancer**
+
+```bash
+# Change spark-master service to LoadBalancer
+microk8s kubectl patch service spark-master -p '{"spec":{"type":"LoadBalancer"}}'
+
+# Check external IP assignment (may take 1-2 minutes)
+microk8s kubectl get services -w
+
+# Expected output:
+# spark-master   LoadBalancer   10.152.183.87   10.201.228.50   8088:31234/TCP,8080:31235/TCP...
+```
+
+### **Step 3: Access via LoadBalancer IPs**
+
+```bash
+# Note the EXTERNAL-IP from kubectl get services
+# Example: 10.201.228.50
+```
+
+**Access using LoadBalancer IP:**
+- **Spark Master UI**: `http://10.201.228.50:8080`
+- **Hadoop NameNode UI**: `http://10.201.228.50:9870`
+- **YARN ResourceManager UI**: `http://10.201.228.50:8088`
+- **Jupyter Notebook**: `http://10.201.228.50:8888`
+- **Spark History Server**: `http://10.201.228.50:18080`
+
+### **LoadBalancer Troubleshooting**
+
+```bash
+# If LoadBalancer shows <pending> for EXTERNAL-IP:
+microk8s kubectl describe service spark-master
+
+# Check MetalLB logs:
+microk8s kubectl logs -n metallb-system -l app=metallb
+
+# Verify IP range is correct:
+microk8s kubectl get configmap config -n metallb-system -o yaml
+```
+
+## **Network Accessibility Summary**
+
+| Access Method | From VM | From Host Machine | From Other Machines |
+|---------------|---------|-------------------|-------------------|
+| **Port Forward** | ✅ `localhost:8080` | ✅ `10.201.228.21:8080` | ❌ Usually blocked |
+| **NodePort** | ✅ `10.201.228.21:30XXX` | ✅ `10.201.228.21:30XXX` | ❓ Depends on network |
+| **LoadBalancer** | ✅ `10.201.228.50:8080` | ✅ `10.201.228.50:8080` | ❓ Depends on network |
+
+## **Recommended Approach**
+
+1. **Start with Port Forwarding** - Simple and reliable for learning
+2. **Try NodePort** - If you want persistent access without manual forwarding  
+3. **Use LoadBalancer** - For advanced Kubernetes learning and production simulation
+
+## **Stop Port Forwarding**
+
+```bash
+# Kill all port forwards when done
+pkill -f "port-forward"
+```
+
+### 9. Monitoring Tools
 
 ### Kubernetes Management Applications
 
@@ -451,7 +573,7 @@ microk8s kubectl delete -f spark-worker-deployment.yaml
 # Then reapply after rebuilding images
 ```
 
-## Testing the Cluster
+### 10. Testing the Cluster
 
 ### 1. Submit a Spark Job
 
@@ -483,7 +605,7 @@ hdfs dfs -ls /test
 hdfs dfs -cat /test/hello.txt
 ```
 
-## Scaling
+### 11. Scaling
 
 To scale the worker nodes:
 
@@ -495,7 +617,7 @@ microk8s kubectl scale deployment spark-worker --replicas=3
 microk8s kubectl scale deployment spark-worker --replicas=2
 ```
 
-## Cleanup
+### 12. Cleanup
 
 ### Remove Kubernetes Resources
 
@@ -515,7 +637,7 @@ multipass delete k8s-master k8s-worker1 k8s-worker2
 multipass purge
 ```
 
-## Troubleshooting
+### 13. Troubleshooting
 
 ### Common Issues
 
@@ -542,7 +664,7 @@ microk8s kubectl get nodes -o wide
 microk8s ctr images list | grep hadoop
 ```
 
-## Image Configuration
+### 14. Image Configuration
 
 The Kubernetes manifests are configured for local images:
 
@@ -550,7 +672,7 @@ The Kubernetes manifests are configured for local images:
 - **Pull policy**: `imagePullPolicy: Never` (prevents internet pulls)
 - **Import required**: Images must be imported on all nodes before deployment
 
-## Resource Requirements
+### 15. Resource Requirements
 
 | Component | CPU | Memory | Disk |
 |-----------|-----|--------|------|
