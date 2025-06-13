@@ -9,7 +9,7 @@
 sleep 5
 
 # Abaixo temos o trecho que rodará apenas no master.
-if [[ $HOSTNAME = spark-master ]]; then
+if [[ $HOSTNAME =~ ^spark-master ]]; then
 
     echo "Starting Hadoop/Spark Master services..."
 
@@ -21,14 +21,15 @@ if [[ $HOSTNAME = spark-master ]]; then
 
     # Iniciamos os serviços do Hadoop
     echo "Starting HDFS..."
-    $HADOOP_HOME/sbin/start-dfs.sh
+    $HADOOP_HOME/bin/hdfs --daemon start namenode
+    $HADOOP_HOME/bin/hdfs --daemon start datanode
 
     echo "Starting YARN..."
-    $HADOOP_HOME/sbin/start-yarn.sh
+    $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 
     # Iniciamos o Spark Master
     echo "Starting Spark Master..."
-    $SPARK_HOME/sbin/start-master.sh
+    $SPARK_HOME/sbin/start-master.sh --host 0.0.0.0 --port 7077 --webui-port 8080
 
     # Aguardar HDFS inicializar
     sleep 10
@@ -89,14 +90,14 @@ else
 
     # Configs de HDFS nos dataNodes (workers)
     echo "Starting DataNode..."
-    $HADOOP_HOME/sbin/hadoop-daemon.sh start datanode
+    $HADOOP_HOME/bin/hdfs --daemon start datanode
 
     echo "Starting NodeManager..."
     $HADOOP_HOME/bin/yarn nodemanager &
 
     # Iniciar Spark Worker
     echo "Starting Spark Worker..."
-    $SPARK_HOME/sbin/start-worker.sh $SPARK_MASTER
+    $SPARK_HOME/sbin/start-worker.sh spark://spark-master:7077
 
     echo "Worker services started successfully!"
 fi

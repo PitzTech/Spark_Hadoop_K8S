@@ -284,7 +284,16 @@ microk8s kubectl apply -f spark-master-service.yaml
 # Deploy Workers
 microk8s kubectl apply -f spark-worker-deployment.yaml
 microk8s kubectl apply -f spark-worker-service.yaml
+
+# Wait for pods to be ready
+microk8s kubectl get pods -w
 ```
+
+**Note**: After deploying, it may take 2-3 minutes for all services to start properly. The bootstrap script automatically:
+- Detects master vs worker pods based on hostname pattern
+- Starts HDFS (NameNode, DataNode) and YARN (ResourceManager) on master
+- Starts Spark Master on master and Spark Workers on worker pods
+- Uses direct daemon commands to avoid SSH dependencies
 
 ### 7. Verify Deployment
 
@@ -295,9 +304,18 @@ microk8s kubectl get pods
 # Check services
 microk8s kubectl get services
 
+# Check pod logs to verify services started
+microk8s kubectl logs deployment/spark-master --tail=20
+microk8s kubectl logs deployment/spark-worker --tail=20
+
 # Get master node IP for web interfaces
 microk8s kubectl get nodes -o wide
 ```
+
+**Expected output after successful deployment:**
+- Pods should be in `Running` status
+- Master logs should show: "Starting Hadoop/Spark Master services..."
+- Worker logs should show: "Starting Hadoop/Spark Worker services..."
 
 ### 8. Access Web Interfaces
 
@@ -416,6 +434,22 @@ k9s
 - Ensure MicroK8s is running: `microk8s status`
 - Check cluster endpoint is accessible from your machine
 - For VM setup, ensure proper network configuration
+
+**Troubleshooting Pod Issues:**
+```bash
+# If pods are stuck or failing
+microk8s kubectl describe pod <pod-name>
+microk8s kubectl logs <pod-name> --previous
+
+# Restart deployments after fixes
+microk8s kubectl rollout restart deployment/spark-master
+microk8s kubectl rollout restart deployment/spark-worker
+
+# Delete and recreate if needed
+microk8s kubectl delete -f spark-master-deployment.yaml
+microk8s kubectl delete -f spark-worker-deployment.yaml
+# Then reapply after rebuilding images
+```
 
 ## Testing the Cluster
 
