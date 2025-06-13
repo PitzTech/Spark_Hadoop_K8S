@@ -84,7 +84,7 @@ microk8s status --wait-ready
 # Enable required addons
 microk8s enable dns storage registry
 
-# Get join token
+# Get join token para cada worker
 microk8s add-node
 # Copy the join command shown
 ```
@@ -112,11 +112,13 @@ microk8s kubectl get nodes
 
 ```bash
 # Navigate to project root
-cd /home/pitztech/iesb/cluster-hadoop
+cd /cluster-hadoop
+
+sudo apt-get install curl make
 
 # Build all images using the provided Makefile
 # This will automatically download required dependencies and build images
-make build
+sudo make build
 
 # Save images to tar files
 docker save spark-base-hadoop:latest -o spark-base-hadoop.tar
