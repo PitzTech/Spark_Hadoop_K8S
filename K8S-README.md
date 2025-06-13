@@ -4,7 +4,7 @@ This project sets up a distributed Apache Spark and Hadoop cluster using Kuberne
 
 ## Prerequisites
 
-- Ubuntu/Linux host machine with Docker installed  
+- Ubuntu/Linux host machine with Docker installed
 - At least 8GB RAM and 20GB disk space
 - Multipass installed
 - Local Docker images built (spark-master-hadoop, spark-worker-hadoop)
@@ -12,7 +12,7 @@ This project sets up a distributed Apache Spark and Hadoop cluster using Kuberne
 ## Architecture
 
 - **Master Node**: Spark Master + Hadoop NameNode + YARN ResourceManager
-- **Worker Nodes**: 2x Spark Workers + Hadoop DataNodes + YARN NodeManagers  
+- **Worker Nodes**: 2x Spark Workers + Hadoop DataNodes + YARN NodeManagers
 - **Deployment**: Kubernetes cluster across multiple VMs using MicroK8s
 - **Images**: Local Docker images (no internet pull required)
 
@@ -24,7 +24,7 @@ This project sets up a distributed Apache Spark and Hadoop cluster using Kuberne
 # On Ubuntu/Debian
 sudo snap install multipass
 
-# On macOS  
+# On macOS
 brew install multipass
 
 # On Windows
@@ -37,11 +37,11 @@ Create three VMs for the Kubernetes cluster:
 
 ```bash
 # Create master node
-multipass launch --name k8s-master --cpus 2 --mem 4G --disk 20G 22.04
+multipass launch -n k8s-master -c 2 -m 4Gb -d 20G
 
 # Create worker nodes
-multipass launch --name k8s-worker1 --cpus 2 --mem 3G --disk 15G 22.04
-multipass launch --name k8s-worker2 --cpus 2 --mem 3G --disk 15G 22.04
+multipass launch -n k8s-worker1 -c 2 -m 3Gb -d 15G
+multipass launch -n k8s-worker2 -c 2 -m 3Gb -d 15G
 ```
 
 ### 3. Install MicroK8s on All Nodes
@@ -53,14 +53,14 @@ Get shell access to each VM and install MicroK8s:
 multipass shell k8s-master
 sudo snap install microk8s --classic
 sudo usermod -a -G microk8s $USER
-sudo chown -f -R $USER ~/.kube  
+sudo chown -f -R $USER ~/.kube
 newgrp microk8s
 microk8s status --wait-ready
 
 # Worker nodes (repeat for both k8s-worker1 and k8s-worker2)
 multipass shell k8s-worker1
 sudo snap install microk8s --classic
-sudo usermod -a -G microk8s $USER  
+sudo usermod -a -G microk8s $USER
 sudo chown -f -R $USER ~/.kube
 newgrp microk8s
 ```
@@ -80,7 +80,7 @@ microk8s add-node
 
 #### On Worker Nodes:
 
-```bash  
+```bash
 # Join the cluster using the command from master
 # Example: microk8s join 192.168.64.2:25000/92b2db237428470dc4fcfc4485738efb/36c2e93d95a2
 microk8s join <MASTER_IP>:25000/<TOKEN>
@@ -128,7 +128,7 @@ multipass transfer spark-master-hadoop.tar k8s-master:/home/ubuntu/
 multipass transfer spark-worker-hadoop.tar k8s-master:/home/ubuntu/
 
 multipass transfer spark-base-hadoop.tar k8s-worker1:/home/ubuntu/
-multipass transfer spark-master-hadoop.tar k8s-worker1:/home/ubuntu/  
+multipass transfer spark-master-hadoop.tar k8s-worker1:/home/ubuntu/
 multipass transfer spark-worker-hadoop.tar k8s-worker1:/home/ubuntu/
 
 multipass transfer spark-base-hadoop.tar k8s-worker2:/home/ubuntu/
@@ -146,7 +146,7 @@ microk8s ctr images import spark-master-hadoop.tar
 microk8s ctr images import spark-worker-hadoop.tar
 
 # On worker1
-multipass shell k8s-worker1  
+multipass shell k8s-worker1
 microk8s ctr images import spark-base-hadoop.tar
 microk8s ctr images import spark-master-hadoop.tar
 microk8s ctr images import spark-worker-hadoop.tar
@@ -154,7 +154,7 @@ microk8s ctr images import spark-worker-hadoop.tar
 # On worker2
 multipass shell k8s-worker2
 microk8s ctr images import spark-base-hadoop.tar
-microk8s ctr images import spark-master-hadoop.tar  
+microk8s ctr images import spark-master-hadoop.tar
 microk8s ctr images import spark-worker-hadoop.tar
 ```
 
@@ -182,14 +182,14 @@ cd k8s/
 
 # Deploy ConfigMaps
 microk8s kubectl apply -f spark-master-cm1-configmap.yaml
-microk8s kubectl apply -f spark-master-cm2-configmap.yaml  
+microk8s kubectl apply -f spark-master-cm2-configmap.yaml
 microk8s kubectl apply -f spark-master-cm3-configmap.yaml
 
 # Deploy Master
 microk8s kubectl apply -f spark-master-deployment.yaml
 microk8s kubectl apply -f spark-master-service.yaml
 
-# Deploy Workers  
+# Deploy Workers
 microk8s kubectl apply -f spark-worker-deployment.yaml
 microk8s kubectl apply -f spark-worker-service.yaml
 ```
@@ -212,7 +212,7 @@ microk8s kubectl get nodes -o wide
 Get the master node IP and access these interfaces:
 
 - **Spark Master UI**: `http://<MASTER_NODE_IP>:8080`
-- **Hadoop NameNode UI**: `http://<MASTER_NODE_IP>:9870`  
+- **Hadoop NameNode UI**: `http://<MASTER_NODE_IP>:9870`
 - **YARN ResourceManager UI**: `http://<MASTER_NODE_IP>:8088`
 - **Spark History Server**: `http://<MASTER_NODE_IP>:18080`
 
@@ -224,7 +224,7 @@ If you can't access directly, use port forwarding:
 # Forward Spark Master UI
 microk8s kubectl port-forward service/spark-master 8080:8080 --address=0.0.0.0
 
-# Forward Hadoop NameNode UI  
+# Forward Hadoop NameNode UI
 microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0
 
 # Forward YARN ResourceManager UI
@@ -259,7 +259,7 @@ echo "Hello Hadoop" | hdfs dfs -put - /test/hello.txt
 # List files
 hdfs dfs -ls /test
 
-# Read file  
+# Read file
 hdfs dfs -cat /test/hello.txt
 ```
 
@@ -309,7 +309,7 @@ multipass purge
 # Check pod logs
 microk8s kubectl logs deployment/spark-master
 
-# Describe pod for troubleshooting  
+# Describe pod for troubleshooting
 microk8s kubectl describe pod <pod-name>
 
 # Get cluster info
@@ -335,5 +335,5 @@ The Kubernetes manifests are configured for local images:
 | Component | CPU | Memory | Disk |
 |-----------|-----|--------|------|
 | Master VM | 2 cores | 4GB | 20GB |
-| Worker VM | 2 cores | 3GB | 15GB |  
+| Worker VM | 2 cores | 3GB | 15GB |
 | **Total** | **6 cores** | **10GB** | **50GB** |
