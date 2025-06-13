@@ -29,7 +29,9 @@ if [[ $HOSTNAME =~ ^spark-master ]]; then
 
     # Iniciamos o Spark Master
     echo "Starting Spark Master..."
-    $SPARK_HOME/sbin/start-master.sh --host 0.0.0.0 --port 7077 --webui-port 8080
+    # Clear conflicting environment variables
+    unset SPARK_MASTER_PORT SPARK_LOCAL_IP
+    $SPARK_HOME/sbin/start-master.sh
 
     # Aguardar HDFS inicializar
     sleep 10
@@ -97,6 +99,8 @@ else
 
     # Iniciar Spark Worker
     echo "Starting Spark Worker..."
+    # Clear conflicting environment variables
+    unset SPARK_WORKER_PORT SPARK_LOCAL_IP
     $SPARK_HOME/sbin/start-worker.sh spark://spark-master:7077
 
     echo "Worker services started successfully!"

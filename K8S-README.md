@@ -336,60 +336,9 @@ microk8s kubectl get nodes -o wide
 - Master logs should show: "Starting Hadoop/Spark Master services..."
 - Worker logs should show: "Starting Hadoop/Spark Worker services..."
 
-### 8. Access Web Interfaces
+### 8. Access Web Interfaces with LoadBalancer
 
-You have multiple options to access the Spark/Hadoop web interfaces from your browser:
-
-## **Option 1: Port Forwarding (Recommended for Testing)**
-
-**Advantages**: Simple, reliable, works from any machine
-**Use case**: Development, testing, learning
-
-```bash
-# Forward multiple ports (run each in separate terminal or use nohup)
-nohup microk8s kubectl port-forward service/spark-master 8080:8080 --address=0.0.0.0 > /dev/null 2>&1 &
-nohup microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0 > /dev/null 2>&1 &
-nohup microk8s kubectl port-forward service/spark-master 8088:8088 --address=0.0.0.0 > /dev/null 2>&1 &
-nohup microk8s kubectl port-forward service/spark-master 8888:8888 --address=0.0.0.0 > /dev/null 2>&1 &
-nohup microk8s kubectl port-forward service/spark-master 18080:18080 --address=0.0.0.0 > /dev/null 2>&1 &
-
-# Check running port forwards
-ps aux | grep port-forward | grep -v grep
-```
-
-**Access from your host machine browser:**
-- **Spark Master UI**: `http://10.201.228.21:8080`
-- **Hadoop NameNode UI**: `http://10.201.228.21:9870`
-- **YARN ResourceManager UI**: `http://10.201.228.21:8088`
-- **Jupyter Notebook**: `http://10.201.228.21:8888`
-- **Spark History Server**: `http://10.201.228.21:18080`
-
-## **Option 2: NodePort Services**
-
-**Advantages**: More "Kubernetes-native", persistent across restarts
-**Use case**: When you want permanent external access
-
-```bash
-# Change services to NodePort type
-microk8s kubectl patch service spark-master -p '{"spec":{"type":"NodePort"}}'
-microk8s kubectl patch service spark-worker -p '{"spec":{"type":"NodePort"}}'
-
-# Check assigned NodePorts
-microk8s kubectl get services
-
-# Example output:
-# spark-master   NodePort   10.152.183.87   <none>   8088:30123/TCP,8080:30124/TCP,9870:30125/TCP...
-```
-
-**Access using NodePorts:**
-- **Spark Master UI**: `http://10.201.228.21:30124` (NodePort for 8080)
-- **Hadoop NameNode UI**: `http://10.201.228.21:30125` (NodePort for 9870)  
-- **YARN ResourceManager**: `http://10.201.228.21:30123` (NodePort for 8088)
-
-## **Option 3: LoadBalancer with MetalLB (Advanced)**
-
-**Advantages**: Production-like setup, external IPs, enterprise feel
-**Use case**: Learning advanced Kubernetes concepts, production simulation
+Access the Spark/Hadoop web interfaces using MetalLB LoadBalancer for a production-like Kubernetes setup:
 
 ### **Step 1: Enable MetalLB**
 
