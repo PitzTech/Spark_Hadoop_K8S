@@ -53,6 +53,7 @@ Get shell access to each VM and install MicroK8s:
 multipass shell k8s-master
 sudo snap install microk8s --classic
 sudo usermod -a -G microk8s $USER
+sudo chown -f -R $USER ~/.kube
 cd ~/.kube && sudo microk8s config > config
 sudo ufw allow in on cni0 && sudo ufw allow out on cni0
 sudo ufw default allow routed
