@@ -1,20 +1,29 @@
-FROM openjdk:8-jdk-slim
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -y openjdk-8-jdk
+
+RUN apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository universe && \
+    apt-get update
 
 COPY /config/jupyter/requirements.txt /
 
 # Ajustes e instalaç?o dos componentes do cluster
-RUN apt-get update \
-    && apt-get install -y wget vim ssh openssh-server curl iputils-ping nano sudo \
+RUN apt-get install -y wget vim ssh openssh-server curl iputils-ping nano sudo \
     python3 python3-pip python3-dev \
     build-essential libssl-dev libffi-dev libpq-dev mariadb-server libmariadb-java \
-    texlive-xetex texlive-fonts-recommended texlive-plain-generic \
-    && python3 -m pip install -r requirements.txt \
-    && python3 -m pip install dask[bag] --upgrade \
-    && python3 -m pip install --upgrade toree \
-    && python3 -m pip install seaborn \
-    && python3 -m bash_kernel.install \
-    && python3 -c "import nltk; nltk.download('stopwords')" \
-    && mkdir datasets
+    texlive-xetex texlive-fonts-recommended texlive-plain-generic
+RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install dask[bag] --upgrade
+RUN python3 -m pip install --upgrade toree
+RUN python3 -m pip install seaborn
+RUN python3 -m bash_kernel.install
+RUN python3 -c "import nltk; nltk.download('stopwords')"
+RUN mkdir datasets
 
 # Keys dos nodes. Necessarias para se comunicarem por SSH
 RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && \

@@ -66,8 +66,20 @@ docker compose --version
    ```bash
    sudo apt-get install make curl
 
+Download the required files by clicking the links below or copying them into your browser:
+
+Hadoop 3.4.0:
+https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
+
+Spark 3.5.0:
+https://drive.google.com/uc?id=19MRDBRugUU6mjB_cEhRhZBOJy92Z8gve
+
+Save the files to the directory:
+hadoop/spark-base/bin
+
 2. Inicie o projeto:
    ```bash
+
    sudo make build
    sudo docker compose up
    sudo docker compose up --build

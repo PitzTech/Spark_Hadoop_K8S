@@ -165,6 +165,17 @@ microk8s kubectl get nodes
 
 **IMPORTANT**: The Kubernetes manifests are configured to use local images only (`imagePullPolicy: Never`).
 
+Download the required files by clicking the links below or copying them into your browser:
+
+Hadoop 3.4.0:
+https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
+
+Spark 3.5.0:
+https://drive.google.com/uc?id=19MRDBRugUU6mjB_cEhRhZBOJy92Z8gve
+
+Save the files to the directory:
+hadoop/spark-base/bin
+
 #### Build images using Makefile:
 
 ```bash
@@ -177,6 +188,7 @@ sudo apt-get install curl make
 # Build all images using the provided Makefile
 # This will automatically download required dependencies and build images
 # NOTE: Docker must be installed before running this command
+
 sudo make build
 
 # Save images to tar files
@@ -186,8 +198,6 @@ docker save spark-worker-hadoop:latest -o spark-worker-hadoop.tar
 ```
 
 **What `make build` does:**
-- Automatically downloads Hadoop 3.4.0 and Spark 3.5.0 from Google Drive
-- Places downloaded files in `hadoop/spark-base/bin/`
 - Builds all three Docker images in correct order
 - Skips downloads if files already exist
 

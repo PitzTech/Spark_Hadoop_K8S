@@ -13,7 +13,7 @@ Choose your preferred deployment method:
 - **Setup time**: ~5 minutes
 
 ### ☸️ Kubernetes (Distributed/Production)
-- **File**: `K8S-README.md` 
+- **File**: `K8S-README.md`
 - **Best for**: Distributed deployment, production-like environments
 - **Requirements**: MicroK8s, Multipass (or any K8s cluster)
 - **Setup time**: ~30 minutes
@@ -92,7 +92,7 @@ cluster-hadoop/
 ### Docker Compose
 - Docker Compose
 
-### Kubernetes  
+### Kubernetes
 - MicroK8s or any Kubernetes cluster
 - Multipass (for VM-based setup)
 
@@ -105,3 +105,28 @@ For deployment-specific issues, refer to the troubleshooting sections in:
 ---
 
 **Choose your path and follow the detailed instructions in the corresponding README file!**
+
+Common problem solutions
+
+let's check if the daemon configuration is working:
+# Check if Docker daemon configuration exists
+```bash
+cat /etc/docker/daemon.json
+```
+If it doesn't exist or doesn't have the DNS configuration, create it:
+```bash
+sudo mkdir -p /etc/docker
+```
+```bash
+sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+  "dns": ["8.8.8.8", "8.8.4.4", "1.1.1.1"],
+  "dns-opts": ["edns0", "trust-ad"],
+  "dns-search": ["."]
+}
+EOF
+```
+Then restart Docker:
+bashsudo systemctl restart docker
+Now try building again:
+bashsudo make build
