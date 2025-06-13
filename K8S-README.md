@@ -93,33 +93,7 @@ microk8s join <MASTER_IP>:25000/<TOKEN>
 microk8s kubectl get nodes
 ```
 
-### 5. Download Required Dependencies
-
-Before building images, download the required Hadoop and Spark distributions:
-
-#### Download dependencies:
-
-```bash
-# Navigate to project root
-cd /home/pitztech/iesb/cluster-hadoop
-
-# Create bin directory if it doesn't exist
-mkdir -p hadoop/spark-base/bin
-
-# Download Hadoop 3.4.0 (do not extract)
-# Go to: https://drive.google.com/file/d/192ek2tXfKRAgKbcTAUTgYUFfsbS-s6Ze/view
-# Download hadoop-3.4.0.tar.gz and place in hadoop/spark-base/bin/
-
-# Download Spark 3.5.0 (do not extract)  
-# Go to: https://drive.google.com/file/d/1D-_GN7e-pJ66xJKDdqy2RbOqaFWfCK-o/view
-# Download spark-3.5.0-bin-hadoop3.tgz and place in hadoop/spark-base/bin/
-```
-
-**Required files in `hadoop/spark-base/bin/`:**
-- `hadoop-3.4.0.tar.gz`
-- `spark-3.5.0-bin-hadoop3.tgz`
-
-### 6. Build and Import Docker Images
+### 5. Build and Import Docker Images
 
 **IMPORTANT**: The Kubernetes manifests are configured to use local images only (`imagePullPolicy: Never`).
 
@@ -130,6 +104,7 @@ mkdir -p hadoop/spark-base/bin
 cd /home/pitztech/iesb/cluster-hadoop
 
 # Build all images using the provided Makefile
+# This will automatically download required dependencies and build images
 make build
 
 # Save images to tar files
@@ -137,6 +112,12 @@ docker save spark-base-hadoop:latest -o spark-base-hadoop.tar
 docker save spark-master-hadoop:latest -o spark-master-hadoop.tar
 docker save spark-worker-hadoop:latest -o spark-worker-hadoop.tar
 ```
+
+**What `make build` does:**
+- Automatically downloads Hadoop 3.4.0 and Spark 3.5.0 from Google Drive
+- Places downloaded files in `hadoop/spark-base/bin/`
+- Builds all three Docker images in correct order
+- Skips downloads if files already exist
 
 #### Transfer images to all VMs:
 
@@ -184,7 +165,7 @@ microk8s ctr images import spark-worker-hadoop.tar
 microk8s ctr images list | grep hadoop
 ```
 
-### 7. Deploy Spark/Hadoop Cluster
+### 6. Deploy Spark/Hadoop Cluster
 
 #### Copy Kubernetes manifests to master node:
 
@@ -213,7 +194,7 @@ microk8s kubectl apply -f spark-worker-deployment.yaml
 microk8s kubectl apply -f spark-worker-service.yaml
 ```
 
-### 8. Verify Deployment
+### 7. Verify Deployment
 
 ```bash
 # Check pods status
@@ -226,7 +207,7 @@ microk8s kubectl get services
 microk8s kubectl get nodes -o wide
 ```
 
-### 9. Access Web Interfaces
+### 8. Access Web Interfaces
 
 Get the master node IP and access these interfaces:
 
@@ -235,7 +216,7 @@ Get the master node IP and access these interfaces:
 - **YARN ResourceManager UI**: `http://<MASTER_NODE_IP>:8088`
 - **Spark History Server**: `http://<MASTER_NODE_IP>:18080`
 
-### 10. Port Forwarding (Alternative Access)
+### 9. Port Forwarding (Alternative Access)
 
 If you can't access directly, use port forwarding:
 
