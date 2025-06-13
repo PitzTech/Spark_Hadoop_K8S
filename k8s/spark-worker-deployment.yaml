@@ -24,4 +24,11 @@ spec:
             - containerPort: 8042
               protocol: TCP
           tty: true
+          volumeMounts:
+            - mountPath: /tmp/hadoop-root/dfs/data
+              name: hdfs-datanode-storage
       restartPolicy: Always
+      volumes:
+        - name: hdfs-datanode-storage
+          persistentVolumeClaim:
+            claimName: hdfs-datanode-pvc

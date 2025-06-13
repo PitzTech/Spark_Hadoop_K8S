@@ -54,6 +54,10 @@ spec:
             - mountPath: /usr/hadoop-3.4.0/etc/hadoop/mapred-site.xml
               name: spark-master-cm3
               subPath: mapred-site.xml
+            - mountPath: /tmp/hadoop-root/dfs/name
+              name: hdfs-namenode-storage
+            - mountPath: /tmp/hadoop-root/dfs/data
+              name: hdfs-datanode-storage
       restartPolicy: Always
       volumes:
         - configMap:
@@ -74,3 +78,9 @@ spec:
                 path: mapred-site.xml
             name: spark-master-cm3
           name: spark-master-cm3
+        - name: hdfs-namenode-storage
+          persistentVolumeClaim:
+            claimName: hdfs-namenode-pvc
+        - name: hdfs-datanode-storage
+          persistentVolumeClaim:
+            claimName: hdfs-datanode-pvc
