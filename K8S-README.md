@@ -159,6 +159,13 @@ microk8s join <MASTER_IP>:25000/<TOKEN>
 ```bash
 # On master node
 microk8s kubectl get nodes
+
+# Configure kubectl alias for easier management
+echo "alias kubectl='microk8s kubectl'" >> ~/.bashrc
+source ~/.bashrc
+
+# Alternative: Export config for external tools
+microk8s config > ~/.kube/config
 ```
 
 ### 5. Build and Import Docker Images
@@ -262,6 +269,9 @@ multipass transfer -r k8s/ k8s-master:/home/ubuntu/
 # On master node
 cd k8s/
 
+# Deploy Persistent Volumes (FIRST)
+microk8s kubectl apply -f hdfs-pv.yaml
+
 # Deploy ConfigMaps
 microk8s kubectl apply -f spark-master-cm1-configmap.yaml
 microk8s kubectl apply -f spark-master-cm2-configmap.yaml
@@ -312,6 +322,100 @@ microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0
 # Forward YARN ResourceManager UI
 microk8s kubectl port-forward service/spark-master 8088:8088 --address=0.0.0.0
 ```
+
+## Monitoring Tools
+
+### Kubernetes Management Applications
+
+For monitoring cluster health, viewing real-time logs, and managing resources:
+
+#### K9s (Recommended - Terminal-based)
+```bash
+# Install K9s - lightweight and powerful
+curl -sS https://webinstall.dev/k9s | bash
+# or via snap
+sudo snap install k9s
+
+# Launch K9s
+k9s
+```
+
+**Features**: Real-time monitoring, live log streaming, pod management, resource graphs
+
+#### Lens (GUI Option)
+```bash
+# Download and install Lens
+wget https://api.k8slens.dev/binaries/Lens-2023.12.151144-latest.amd64.deb
+sudo dpkg -i Lens-*.deb
+
+# If missing dependencies:
+sudo apt-get install -f
+```
+
+**Connect Lens to MicroK8s:**
+
+1. **Export MicroK8s config** (on master node):
+```bash
+# Create .kube directory if it doesn't exist
+mkdir -p ~/.kube
+
+# Export MicroK8s config to standard kubectl location
+microk8s config > ~/.kube/config
+
+# Set proper permissions
+chmod 600 ~/.kube/config
+```
+
+2. **Transfer config to your host machine** (if Lens is on different machine):
+```bash
+# From your host machine, copy the config from master node
+multipass transfer k8s-master:/home/ubuntu/.kube/config ~/.kube/config
+
+# Or if running Lens directly on master VM:
+# The config is already in ~/.kube/config
+```
+
+3. **Add cluster in Lens:**
+   - Open Lens application
+   - Click **"+"** or **"Add Cluster"**
+   - Select **"Add from kubeconfig"**
+   - Browse to `~/.kube/config` or paste the config content
+   - Click **"Add Cluster"**
+
+4. **Verify connection:**
+   - Lens should now show your MicroK8s cluster
+   - You'll see nodes, pods, and services
+   - Real-time logs and monitoring will be available
+
+#### Kubernetes Dashboard (Web-based)
+```bash
+# Enable dashboard (already mentioned above)
+microk8s enable dashboard
+
+# Access dashboard
+microk8s dashboard-proxy
+# Follow the instructions to get the token and URL
+```
+
+#### Configure External Tools
+```bash
+# For external tools like Lens, K9s to work with MicroK8s
+mkdir -p ~/.kube
+microk8s config > ~/.kube/config
+chmod 600 ~/.kube/config
+
+# Verify connection
+kubectl get nodes
+
+# Test with K9s
+k9s
+```
+
+**Troubleshooting Lens Connection:**
+- If Lens shows connection errors, verify the config file path
+- Ensure MicroK8s is running: `microk8s status`
+- Check cluster endpoint is accessible from your machine
+- For VM setup, ensure proper network configuration
 
 ## Testing the Cluster
 
