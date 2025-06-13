@@ -262,9 +262,9 @@ docker images | grep hadoop
 
 ```bash
 # On each VM, import the built images to MicroK8s
-microk8s ctr images import <(docker save spark-base-hadoop:latest)
-microk8s ctr images import <(docker save spark-master-hadoop:latest)
-microk8s ctr images import <(docker save spark-worker-hadoop:latest)
+docker save spark-base-hadoop:latest | microk8s ctr images import -
+docker save spark-master-hadoop:latest | microk8s ctr images import -
+docker save spark-worker-hadoop:latest | microk8s ctr images import -
 
 # Verify images are available in MicroK8s
 microk8s ctr images list | grep hadoop
