@@ -7,7 +7,7 @@ RUN apt-get update
 RUN apt-get install -y openjdk-8-jdk
 
 # Definir o JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 RUN apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository universe && \
@@ -36,23 +36,24 @@ COPY /config/config /root/.ssh
 RUN chmod 600 /root/.ssh/config
 
 # Variaveis de ambiente do Hadoop
-ENV HADOOP_VERSION 3.4.0
-ENV HADOOP_MINOR_VERSION 3
-ENV HADOOP_HOME /usr/hadoop-$HADOOP_VERSION
+ENV HADOOP_VERSION=3.4.0
+ENV HADOOP_MINOR_VERSION=3
+ENV HADOOP_HOME=/usr/hadoop-$HADOOP_VERSION
 ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-ENV HDFS_NAMENODE_USER root
-ENV HDFS_SECONDARYNAMENODE_USER root
-ENV HDFS_DATANODE_USER root
-ENV YARN_RESOURCEMANAGER_USER root
-ENV YARN_NODEMANAGER_USER root
+ENV HDFS_NAMENODE_USER=root
+ENV HDFS_SECONDARYNAMENODE_USER=root
+ENV HDFS_DATANODE_USER=root
+ENV YARN_RESOURCEMANAGER_USER=root
+ENV YARN_NODEMANAGER_USER=root
 
 # Variaveis de ambiente do Spark
-ENV SPARK_VERSION 3.5.0
-ENV SPARK_HOME /usr/spark-${SPARK_VERSION}
+ENV SPARK_VERSION=3.5.0
+ENV SPARK_HOME=/usr/spark-${SPARK_VERSION}
+ENV SPARK_CONF_DIR=$SPARK_HOME/conf
 ENV SPARK_DIST_CLASSPATH="$HADOOP_HOME/etc/hadoop/*:$HADOOP_HOME/share/hadoop/common/lib/*:$HADOOP_HOME/share/hadoop/common/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/yarn/lib/*:$HADOOP_HOME/share/hadoop/yarn/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*:$HADOOP_HOME/share/hadoop/mapreduce/*:$HADOOP_HOME/share/hadoop/tools/lib/*"
 
 # Configuracoes do pyspark
-ENV PYSPARK_PYTHON python3
+ENV PYSPARK_PYTHON=python3
 
 # Usar python3 para modo cluster, e jupyter + configuracao de PYSPARK_DRIVER_PYTHON_OPTS='notebook'
 # para modo interativo
@@ -61,8 +62,8 @@ ENV PYSPARK_DRIVER_PYTHON=python3
 # ENV PYSPARK_DRIVER_PYTHON_OPTS='notebook'
 
 # Adicao de valores aos paths abaixo para que os componentes os localizem
-ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip:/usr/bin/python3
-ENV PATH $PATH:$JAVA_HOME/bin:$HADOOP_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip:$PYTHONPATH
+ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:/usr/bin/python3
+ENV PATH=$PATH:$JAVA_HOME/bin:$HADOOP_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH
 
 #  Instalaç?o do Hadoop
     # && wget \
