@@ -53,6 +53,10 @@ Get shell access to each VM and install MicroK8s:
 multipass shell k8s-master
 sudo snap install microk8s --classic
 sudo usermod -a -G microk8s $USER
+cd ~/.kube && sudo microk8s config > config
+sudo ufw allow in on cni0 && sudo ufw allow out on cni0
+sudo ufw default allow routed
+sudo microk8s enable dns dashboard storage
 sudo chown -f -R $USER ~/.kube
 newgrp microk8s
 microk8s status --wait-ready
