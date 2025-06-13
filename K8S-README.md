@@ -4,6 +4,63 @@ This project sets up a distributed Apache Spark and Hadoop cluster using Kuberne
 
 ## Prerequisites
 
+### 1. Docker Installation (Required)
+
+Docker must be installed on your host machine before proceeding:
+
+#### Ubuntu/Debian:
+```bash
+# Update packages
+sudo apt-get update
+
+# Install dependencies
+sudo apt-get install apt-transport-https ca-certificates curl gnupg lsb-release
+
+# Add Docker's official GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker Engine
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Restart session or run:
+newgrp docker
+
+# Verify installation
+docker --version
+docker compose version
+```
+
+#### CentOS/RHEL/Fedora:
+```bash
+# Install Docker
+sudo dnf install docker docker-compose
+
+# Start and enable Docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+#### Verify Docker Installation:
+```bash
+# Test Docker
+docker run hello-world
+
+# Check Docker Compose
+docker compose --version
+```
+
+### 2. System Requirements
 - Ubuntu/Linux host machine with Docker installed
 - At least 8GB RAM and 20GB disk space
 - Multipass installed
@@ -112,12 +169,14 @@ microk8s kubectl get nodes
 
 ```bash
 # Navigate to project root
-cd /cluster-hadoop
+cd /path/to/Spark_Hadoop_K8S
 
+# Install required dependencies
 sudo apt-get install curl make
 
 # Build all images using the provided Makefile
 # This will automatically download required dependencies and build images
+# NOTE: Docker must be installed before running this command
 sudo make build
 
 # Save images to tar files
