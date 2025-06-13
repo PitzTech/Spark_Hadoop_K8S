@@ -168,13 +168,13 @@ source ~/.bashrc
 microk8s config > ~/.kube/config
 ```
 
-### 5. Build Docker Images Directly in VMs
+### 5. Build Docker Images Locally and Transfer to VMs
 
 **IMPORTANT**: The Kubernetes manifests are configured to use local images only (`imagePullPolicy: Never`).
 
 #### Download Required Binaries:
 
-First, download the required Hadoop and Spark binaries on your host machine:
+Download the required Hadoop and Spark binaries to your host machine:
 
 **Hadoop 3.4.0:**
 https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
@@ -182,100 +182,95 @@ https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
 **Spark 3.5.0:**
 https://drive.google.com/uc?id=19MRDBRugUU6mjB_cEhRhZBOJy92Z8gve
 
-Save both files to your Downloads folder (or note the exact path where you save them).
+Save both files to the `hadoop/spark-base/bin/` directory in your local repository.
 
-#### Clone Repository and Transfer Binaries:
-
-```bash
-# Master node
-multipass shell k8s-master
-git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-exit
-
-# Create bin folder and transfer binaries to master VM
-# First create the bin directory in the VM
-multipass exec k8s-master -- mkdir -p /home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin
-
-# Then transfer the binaries (adjust paths to where you downloaded the files)
-# If files are in Downloads folder:
-multipass transfer ~/Downloads/hadoop-3.4.0.tar.gz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-multipass transfer ~/Downloads/spark-3.5.0-bin-hadoop3.tgz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-
-multipass transfer -r hadoop/spark-base/bin/ k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/
-
-# Repeat for worker nodes (if using multi-node setup)
-multipass shell k8s-worker1
-git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-exit
-
-# Create bin directory and transfer binaries to worker1
-multipass exec k8s-worker1 -- mkdir -p /home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin
-multipass transfer ~/Downloads/hadoop-3.4.0.tar.gz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-multipass transfer ~/Downloads/spark-3.5.0-bin-hadoop3.tgz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
-
-multipass transfer -r hadoop/spark-base/bin/ k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/
-```
-
-#### Build Images on All Nodes:
+#### Build Images on Host Machine:
 
 ```bash
-# On each VM (master, worker1, worker2):
-multipass shell k8s-master  # (or k8s-worker1, k8s-worker2)
-cd Spark_Hadoop_K8S
-
-# Install required dependencies including Docker
-sudo apt-get update
-sudo apt-get install -y make curl apt-transport-https ca-certificates gnupg lsb-release
-
-# Install Docker
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Verify Docker installation
-docker --version
-
+# On your host machine (where you cloned this repository)
 # Verify binaries are in place
 ls -la hadoop/spark-base/bin/
 # Should show: hadoop-3.4.0.tar.gz and spark-3.5.0-bin-hadoop3.tgz
 
 # Build all images using the provided Makefile
-sudo make build
+make build
 
 # Verify images are built
 docker images | grep hadoop
+# Should show: spark-base-hadoop, spark-master-hadoop, spark-worker-hadoop
 ```
 
-**What `make build` does:**
-- Uses the transferred Hadoop 3.4.0 and Spark 3.5.0 binaries
-- Builds all three Docker images in correct order (spark-base, spark-master, spark-worker)
-- Takes 5-10 minutes per VM
-
-**Note**: The large binaries (1.3GB total) are not included in the Git repository due to size limitations. You must download and transfer them manually.
-
-#### Import Images to MicroK8s:
+#### Save Images as TAR Files:
 
 ```bash
-# On each VM, import the built images to MicroK8s
+# Save Docker images to tar files for transfer
+docker save spark-base-hadoop:latest -o spark-base-hadoop.tar
+docker save spark-master-hadoop:latest -o spark-master-hadoop.tar  
+docker save spark-worker-hadoop:latest -o spark-worker-hadoop.tar
+
+# Verify tar files created
+ls -la *.tar
+```
+
+#### Transfer Images to All VMs:
+
+```bash
+# Transfer to master node
+multipass transfer spark-base-hadoop.tar k8s-master:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-master:/home/ubuntu/
+multipass transfer spark-worker-hadoop.tar k8s-master:/home/ubuntu/
+
+# Transfer to worker nodes
+multipass transfer spark-base-hadoop.tar k8s-worker1:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-worker1:/home/ubuntu/
+multipass transfer spark-worker-hadoop.tar k8s-worker1:/home/ubuntu/
+
+multipass transfer spark-base-hadoop.tar k8s-worker2:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-worker2:/home/ubuntu/
+multipass transfer spark-worker-hadoop.tar k8s-worker2:/home/ubuntu/
+```
+
+#### Load and Import Images on All VMs:
+
+```bash
+# On each VM (master, worker1, worker2):
+multipass shell k8s-master  # (or k8s-worker1, k8s-worker2)
+
+# Load Docker images from tar files
+docker load -i spark-base-hadoop.tar
+docker load -i spark-master-hadoop.tar
+docker load -i spark-worker-hadoop.tar
+
+# Verify images are loaded
+docker images | grep hadoop
+
+# Import images to MicroK8s
 docker save spark-base-hadoop:latest | microk8s ctr images import -
 docker save spark-master-hadoop:latest | microk8s ctr images import -
 docker save spark-worker-hadoop:latest | microk8s ctr images import -
 
 # Verify images are available in MicroK8s
 microk8s ctr images list | grep hadoop
+
+# Clean up tar files
+rm -f *.tar
+
+exit
+```
+
+#### Transfer Kubernetes Manifests:
+
+```bash
+# Transfer k8s manifests to master node
+multipass transfer -r k8s/ k8s-master:/home/ubuntu/
 ```
 
 **Advantages of this approach:**
-- ✅ No large file transfers between host and VMs
-- ✅ Each VM has the source code for debugging
-- ✅ Faster than transferring 1.3GB+ tar files
-- ✅ Self-contained - each VM builds independently
-- ✅ Easy to make changes and rebuild
+- ✅ Build once on host machine (faster, more CPU/RAM)
+- ✅ Transfer compressed images instead of building on each VM
+- ✅ Faster deployment - no compilation time on VMs
+- ✅ Consistent images across all nodes
+- ✅ Uses host machine's Docker cache for faster rebuilds
 
 ### 6. Deploy Spark/Hadoop Cluster
 
