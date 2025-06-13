@@ -6,6 +6,9 @@ RUN apt-get update
 
 RUN apt-get install -y openjdk-8-jdk
 
+# Definir o JAVA_HOME
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+
 RUN apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository universe && \
     apt-get update

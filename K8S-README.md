@@ -94,11 +94,11 @@ Create three VMs for the Kubernetes cluster:
 
 ```bash
 # Create master node
-multipass launch -n k8s-master -c 2 -m 4Gb -d 20G
+multipass launch -n k8s-master -c 2 -m 4Gb -d 100G
 
 # Create worker nodes
-multipass launch -n k8s-worker1 -c 2 -m 3Gb -d 15G
-multipass launch -n k8s-worker2 -c 2 -m 3Gb -d 15G
+multipass launch -n k8s-worker1 -c 2 -m 3Gb -d 100G
+multipass launch -n k8s-worker2 -c 2 -m 3Gb -d 100G
 ```
 
 ### 3. Install MicroK8s on All Nodes
@@ -253,7 +253,7 @@ microk8s ctr images list | grep hadoop
 
 ```bash
 # From your host machine
-multipass transfer k8s/ k8s-master:/home/ubuntu/
+multipass transfer -r k8s/ k8s-master:/home/ubuntu/
 ```
 
 #### Deploy the cluster:
