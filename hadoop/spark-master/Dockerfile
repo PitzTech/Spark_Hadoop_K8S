@@ -1,5 +1,5 @@
 
-FROM raulcsouza/spark-base-hadoop
+FROM spark-base-hadoop:latest
 
 ENV SPARK_MASTER "spark://spark-master:7077"
 ENV SPARK_MASTER_HOST spark-master

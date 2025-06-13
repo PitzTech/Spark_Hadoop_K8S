@@ -1,4 +1,4 @@
-FROM raulcsouza/spark-base-hadoop
+FROM spark-base-hadoop:latest
 
 ENV SPARK_WORKER_WEBUI_PORT 8081
 ENV SPARK_MASTER "spark://spark-master:7077"

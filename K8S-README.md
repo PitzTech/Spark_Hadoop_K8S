@@ -1,19 +1,20 @@
 # Distributed Spark/Hadoop Cluster on Kubernetes
 
-This project sets up a distributed Apache Spark and Hadoop cluster using Kubernetes with MicroK8s and Multipass VMs.
+This project sets up a distributed Apache Spark and Hadoop cluster using Kubernetes with MicroK8s and Multipass VMs using **local Docker images**.
 
 ## Prerequisites
 
-- Ubuntu/Linux host machine
+- Ubuntu/Linux host machine with Docker installed  
 - At least 8GB RAM and 20GB disk space
 - Multipass installed
-- Internet connection for downloading images
+- Local Docker images built (spark-master-hadoop, spark-worker-hadoop)
 
 ## Architecture
 
 - **Master Node**: Spark Master + Hadoop NameNode + YARN ResourceManager
-- **Worker Nodes**: 2x Spark Workers + Hadoop DataNodes + YARN NodeManagers
+- **Worker Nodes**: 2x Spark Workers + Hadoop DataNodes + YARN NodeManagers  
 - **Deployment**: Kubernetes cluster across multiple VMs using MicroK8s
+- **Images**: Local Docker images (no internet pull required)
 
 ## Setup Instructions
 
@@ -23,7 +24,7 @@ This project sets up a distributed Apache Spark and Hadoop cluster using Kuberne
 # On Ubuntu/Debian
 sudo snap install multipass
 
-# On macOS
+# On macOS  
 brew install multipass
 
 # On Windows
@@ -52,14 +53,14 @@ Get shell access to each VM and install MicroK8s:
 multipass shell k8s-master
 sudo snap install microk8s --classic
 sudo usermod -a -G microk8s $USER
-sudo chown -f -R $USER ~/.kube
+sudo chown -f -R $USER ~/.kube  
 newgrp microk8s
 microk8s status --wait-ready
 
 # Worker nodes (repeat for both k8s-worker1 and k8s-worker2)
 multipass shell k8s-worker1
 sudo snap install microk8s --classic
-sudo usermod -a -G microk8s $USER
+sudo usermod -a -G microk8s $USER  
 sudo chown -f -R $USER ~/.kube
 newgrp microk8s
 ```
@@ -79,7 +80,7 @@ microk8s add-node
 
 #### On Worker Nodes:
 
-```bash
+```bash  
 # Join the cluster using the command from master
 # Example: microk8s join 192.168.64.2:25000/92b2db237428470dc4fcfc4485738efb/36c2e93d95a2
 microk8s join <MASTER_IP>:25000/<TOKEN>
@@ -92,7 +93,98 @@ microk8s join <MASTER_IP>:25000/<TOKEN>
 microk8s kubectl get nodes
 ```
 
-### 5. Deploy Spark/Hadoop Cluster
+### 5. Download Required Dependencies
+
+Before building images, download the required Hadoop and Spark distributions:
+
+#### Download dependencies:
+
+```bash
+# Navigate to project root
+cd /home/pitztech/iesb/cluster-hadoop
+
+# Create bin directory if it doesn't exist
+mkdir -p hadoop/spark-base/bin
+
+# Download Hadoop 3.4.0 (do not extract)
+# Go to: https://drive.google.com/file/d/192ek2tXfKRAgKbcTAUTgYUFfsbS-s6Ze/view
+# Download hadoop-3.4.0.tar.gz and place in hadoop/spark-base/bin/
+
+# Download Spark 3.5.0 (do not extract)  
+# Go to: https://drive.google.com/file/d/1D-_GN7e-pJ66xJKDdqy2RbOqaFWfCK-o/view
+# Download spark-3.5.0-bin-hadoop3.tgz and place in hadoop/spark-base/bin/
+```
+
+**Required files in `hadoop/spark-base/bin/`:**
+- `hadoop-3.4.0.tar.gz`
+- `spark-3.5.0-bin-hadoop3.tgz`
+
+### 6. Build and Import Docker Images
+
+**IMPORTANT**: The Kubernetes manifests are configured to use local images only (`imagePullPolicy: Never`).
+
+#### Build images using Makefile:
+
+```bash
+# Navigate to project root
+cd /home/pitztech/iesb/cluster-hadoop
+
+# Build all images using the provided Makefile
+make build
+
+# Save images to tar files
+docker save spark-base-hadoop:latest -o spark-base-hadoop.tar
+docker save spark-master-hadoop:latest -o spark-master-hadoop.tar
+docker save spark-worker-hadoop:latest -o spark-worker-hadoop.tar
+```
+
+#### Transfer images to all VMs:
+
+```bash
+# Transfer all images to all nodes
+multipass transfer spark-base-hadoop.tar k8s-master:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-master:/home/ubuntu/
+multipass transfer spark-worker-hadoop.tar k8s-master:/home/ubuntu/
+
+multipass transfer spark-base-hadoop.tar k8s-worker1:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-worker1:/home/ubuntu/  
+multipass transfer spark-worker-hadoop.tar k8s-worker1:/home/ubuntu/
+
+multipass transfer spark-base-hadoop.tar k8s-worker2:/home/ubuntu/
+multipass transfer spark-master-hadoop.tar k8s-worker2:/home/ubuntu/
+multipass transfer spark-worker-hadoop.tar k8s-worker2:/home/ubuntu/
+```
+
+#### Import images on all nodes:
+
+```bash
+# On master node
+multipass shell k8s-master
+microk8s ctr images import spark-base-hadoop.tar
+microk8s ctr images import spark-master-hadoop.tar
+microk8s ctr images import spark-worker-hadoop.tar
+
+# On worker1
+multipass shell k8s-worker1  
+microk8s ctr images import spark-base-hadoop.tar
+microk8s ctr images import spark-master-hadoop.tar
+microk8s ctr images import spark-worker-hadoop.tar
+
+# On worker2
+multipass shell k8s-worker2
+microk8s ctr images import spark-base-hadoop.tar
+microk8s ctr images import spark-master-hadoop.tar  
+microk8s ctr images import spark-worker-hadoop.tar
+```
+
+#### Verify images are loaded:
+
+```bash
+# On all nodes
+microk8s ctr images list | grep hadoop
+```
+
+### 7. Deploy Spark/Hadoop Cluster
 
 #### Copy Kubernetes manifests to master node:
 
@@ -109,19 +201,19 @@ cd k8s/
 
 # Deploy ConfigMaps
 microk8s kubectl apply -f spark-master-cm1-configmap.yaml
-microk8s kubectl apply -f spark-master-cm2-configmap.yaml
+microk8s kubectl apply -f spark-master-cm2-configmap.yaml  
 microk8s kubectl apply -f spark-master-cm3-configmap.yaml
 
 # Deploy Master
 microk8s kubectl apply -f spark-master-deployment.yaml
 microk8s kubectl apply -f spark-master-service.yaml
 
-# Deploy Workers
+# Deploy Workers  
 microk8s kubectl apply -f spark-worker-deployment.yaml
 microk8s kubectl apply -f spark-worker-service.yaml
 ```
 
-### 6. Verify Deployment
+### 8. Verify Deployment
 
 ```bash
 # Check pods status
@@ -134,16 +226,16 @@ microk8s kubectl get services
 microk8s kubectl get nodes -o wide
 ```
 
-### 7. Access Web Interfaces
+### 9. Access Web Interfaces
 
 Get the master node IP and access these interfaces:
 
 - **Spark Master UI**: `http://<MASTER_NODE_IP>:8080`
-- **Hadoop NameNode UI**: `http://<MASTER_NODE_IP>:9870`
+- **Hadoop NameNode UI**: `http://<MASTER_NODE_IP>:9870`  
 - **YARN ResourceManager UI**: `http://<MASTER_NODE_IP>:8088`
 - **Spark History Server**: `http://<MASTER_NODE_IP>:18080`
 
-### 8. Port Forwarding (Alternative Access)
+### 10. Port Forwarding (Alternative Access)
 
 If you can't access directly, use port forwarding:
 
@@ -151,7 +243,7 @@ If you can't access directly, use port forwarding:
 # Forward Spark Master UI
 microk8s kubectl port-forward service/spark-master 8080:8080 --address=0.0.0.0
 
-# Forward Hadoop NameNode UI
+# Forward Hadoop NameNode UI  
 microk8s kubectl port-forward service/spark-master 9870:9870 --address=0.0.0.0
 
 # Forward YARN ResourceManager UI
@@ -186,7 +278,7 @@ echo "Hello Hadoop" | hdfs dfs -put - /test/hello.txt
 # List files
 hdfs dfs -ls /test
 
-# Read file
+# Read file  
 hdfs dfs -cat /test/hello.txt
 ```
 
@@ -227,7 +319,7 @@ multipass purge
 ### Common Issues
 
 1. **Pods stuck in Pending**: Check node resources with `microk8s kubectl describe nodes`
-2. **Image pull errors**: Ensure internet connectivity in VMs
+2. **ImagePullBackOff errors**: Ensure images are imported on all nodes with `microk8s ctr images list`
 3. **Service not accessible**: Check firewall rules and service endpoints
 
 ### Useful Commands
@@ -236,7 +328,7 @@ multipass purge
 # Check pod logs
 microk8s kubectl logs deployment/spark-master
 
-# Describe pod for troubleshooting
+# Describe pod for troubleshooting  
 microk8s kubectl describe pod <pod-name>
 
 # Get cluster info
@@ -244,20 +336,23 @@ microk8s kubectl cluster-info
 
 # Check node status
 microk8s kubectl get nodes -o wide
+
+# List imported images
+microk8s ctr images list | grep hadoop
 ```
 
-## Configuration Files
+## Image Configuration
 
-- `spark-master-deployment.yaml`: Spark Master + Hadoop NameNode
-- `spark-worker-deployment.yaml`: Spark Workers (scalable)
-- `spark-master-service.yaml`: Services for master node
-- `spark-worker-service.yaml`: Services for worker nodes
-- `spark-master-cm*-configmap.yaml`: Hadoop configuration files
+The Kubernetes manifests are configured for local images:
+
+- **Image names**: `spark-master-hadoop:latest`, `spark-worker-hadoop:latest`
+- **Pull policy**: `imagePullPolicy: Never` (prevents internet pulls)
+- **Import required**: Images must be imported on all nodes before deployment
 
 ## Resource Requirements
 
 | Component | CPU | Memory | Disk |
 |-----------|-----|--------|------|
 | Master VM | 2 cores | 4GB | 20GB |
-| Worker VM | 2 cores | 3GB | 15GB |
+| Worker VM | 2 cores | 3GB | 15GB |  
 | **Total** | **6 cores** | **10GB** | **50GB** |

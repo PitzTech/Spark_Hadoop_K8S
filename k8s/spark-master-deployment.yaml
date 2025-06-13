@@ -23,7 +23,8 @@ spec:
         io.kompose.service: spark-master
     spec:
       containers:
-        - image: raulcsouza/spark-master-hadoop
+        - image: spark-master-hadoop:latest
+          imagePullPolicy: Never
           name: spark-master
           ports:
             - containerPort: 8088
