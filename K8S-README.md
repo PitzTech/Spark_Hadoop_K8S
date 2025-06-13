@@ -172,38 +172,62 @@ microk8s config > ~/.kube/config
 
 **IMPORTANT**: The Kubernetes manifests are configured to use local images only (`imagePullPolicy: Never`).
 
-#### Clone Repository in Each VM:
+#### Download Required Binaries:
+
+First, download the required Hadoop and Spark binaries on your host machine:
+
+**Hadoop 3.4.0:**
+https://drive.google.com/uc?id=1LCQEl0pVk3mCjbZZ4sZtXTG3fD68w7Oy
+
+**Spark 3.5.0:**
+https://drive.google.com/uc?id=19MRDBRugUU6mjB_cEhRhZBOJy92Z8gve
+
+Save both files to your host machine.
+
+#### Clone Repository and Transfer Binaries:
 
 ```bash
 # Master node
 multipass shell k8s-master
 git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-cd Spark_Hadoop_K8S
+exit
 
-# Worker nodes (if using multi-node setup)
+# Transfer binaries to master VM
+multipass transfer hadoop-3.4.0.tar.gz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-master:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+
+# Repeat for worker nodes (if using multi-node setup)
 multipass shell k8s-worker1
 git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-cd Spark_Hadoop_K8S
+exit
 
-multipass shell k8s-worker2  
+multipass transfer hadoop-3.4.0.tar.gz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-worker1:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+
+multipass shell k8s-worker2
 git clone https://github.com/PitzTech/Spark_Hadoop_K8S.git
-cd Spark_Hadoop_K8S
+exit
+
+multipass transfer hadoop-3.4.0.tar.gz k8s-worker2:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
+multipass transfer spark-3.5.0-bin-hadoop3.tgz k8s-worker2:/home/ubuntu/Spark_Hadoop_K8S/hadoop/spark-base/bin/
 ```
 
 #### Build Images on All Nodes:
 
 ```bash
 # On each VM (master, worker1, worker2):
+multipass shell k8s-master  # (or k8s-worker1, k8s-worker2)
+cd Spark_Hadoop_K8S
 
 # Install required dependencies
 sudo apt-get update
-sudo apt-get install -y make curl python3-pip
+sudo apt-get install -y make curl
 
-# Install gdown for downloading large files
-pip3 install gdown
+# Verify binaries are in place
+ls -la hadoop/spark-base/bin/
+# Should show: hadoop-3.4.0.tar.gz and spark-3.5.0-bin-hadoop3.tgz
 
 # Build all images using the provided Makefile
-# This automatically downloads Hadoop/Spark binaries and builds images
 sudo make build
 
 # Verify images are built
@@ -211,10 +235,11 @@ docker images | grep hadoop
 ```
 
 **What `make build` does:**
-- Downloads Hadoop 3.4.0 and Spark 3.5.0 binaries automatically
+- Uses the transferred Hadoop 3.4.0 and Spark 3.5.0 binaries
 - Builds all three Docker images in correct order (spark-base, spark-master, spark-worker)
-- Skips downloads if files already exist
 - Takes 5-10 minutes per VM
+
+**Note**: The large binaries (1.3GB total) are not included in the Git repository due to size limitations. You must download and transfer them manually.
 
 #### Import Images to MicroK8s:
 
